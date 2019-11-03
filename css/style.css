@@ -1,0 +1,32 @@
+body, html { 
+	margin: 0;
+	height: 100%;
+}
+
+
+:root {
+	--config-font-size: 16px;
+	--config-foreground-color: #FFFFFF;
+	--config-background-color: #121212;
+	--config-margin-left: 16px;
+}
+
+.wrapper {
+	font-family: monospace;
+	width: 100%;
+	height: 100%;
+	padding-top: 16px;
+
+	padding-left: var(--config-margin-left);
+	background: var(--config-background-color);
+	font-size: var(--config-font-size);
+	color: var(--config-foreground-color);
+}
+
+#input-line {
+	font-family: inherit;
+	outline: 0;
+	background: transparent;
+	color: inherit;
+	border: 0;
+}

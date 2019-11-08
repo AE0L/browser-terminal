@@ -130,9 +130,14 @@ define([
 						background: styles.getVar('--config-background'),
 						foreground: styles.getVar('--config-foreground'),
 						font_size: styles.getVar('--config-font_size'),
+						font_weight: styles.getVar('--config-font_weight'),
 						margin_sides: styles.getVar('--config-margins_sides'),
-						prompt_color: styles.getVar('--config-prompt_color'),
+						prompt_user_color: styles.getVar('--config-prompt_user_color'),
+						prompt_symbol_color: styles.getVar('--config-prompt_symbol_color'),
 						prompt_symbol: '$',
+						error_source_color: styles.getVar('--config-error_source_color'),
+						error_code_color: styles.getVar('--config-error_code_color'),
+						secondary_color: '#608460',
 						prompt_user: 'User',
 						max_buffer: 50,
 						max_history: 10,
@@ -156,14 +161,18 @@ define([
 			 * STDIN, it will add the correct keyboard events.
 			 */
 			function change_curr_stdin(stdin) {
+				if (components.curr_stdin)
+					components.curr_stdin.disabled = true
 				components.curr_stdin = stdin
 
 				if (stdin !== null) {
 					document.onclick = () => components.curr_stdin.focus()
 
 					if (stdin === components.main_stdin) {
+						components.main_stdin.disabled = false
 						document.onkeydown = (e) => {
 							if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey) {
+								console.log('pressed')
 								run_command(components.curr_stdin.value, false)
 							} else if (e.key === 'Tab') {
 								e.preventDefault()
@@ -203,7 +212,7 @@ define([
 				const command = input.shift()
 				input = input.join(' ').trim()
 
-				const cancel_command = new Promise(resolve => {
+				const cancel_command = () => new Promise(resolve => {
 					const key_handler = (e) => {
 						if (e.ctrlKey && (e.key === 'c' || e.key === 'C')) {
 							document.removeEventListener('keydown', key_handler)
@@ -220,13 +229,12 @@ define([
 				if (commands.valid(command)) {
 					hide_main_stdin()
 
-					Promise.race([commands.get(command).run(input), cancel_command])
+					Promise.race([commands.get(command).run(input), cancel_command()])
 						.catch((err) => {
-							console.log('err: ', err)
 							error(command, err.code, err.details)
 						})
 						.then(() => {
-							console.log('command finished')
+							console.log('command execution successful')
 							remove_cancel_listener()
 							show_main_stdin()
 						})
@@ -322,9 +330,46 @@ define([
 			 */
 			function new_line() {
 				const line = document.createElement('pre')
+				line.appendChild(dom.text(' '))
 				line.classList.add('line')
 				append_stdout(line)
 				components.bottom_offset.scrollIntoView()
+			}
+
+			/**
+			 * 
+			 */
+			function read_line(label_text) {
+				hide_main_stdin()
+				return new Promise((resolve, reject) => {
+					const line = dom.create('div')
+					const input = dom.create('input')
+					let label
+
+					if (label_text) {
+						label = dom.create('pre')
+						label.appendChild(dom.text(label_text))
+						label.classList.add('label')
+						line.appendChild(label)
+					}
+
+					input.classList.add('stdin')
+					line.classList.add('command')
+					line.appendChild(input)
+
+					function submit(e) {
+						if (e.key === 'Enter') {
+							e.preventDefault()
+							this.removeEventListener('keydown', submit)
+							return resolve(this.value)
+						}
+					}
+
+					input.addEventListener('keydown', submit)
+
+					append_stdout(line)
+					change_curr_stdin(input)
+				})
 			}
 
 			/**
@@ -447,18 +492,15 @@ define([
 				components.main_stdin_cont.classList.remove('hide-stdin')
 				components.main_stdin.value = ''
 				components.bottom_offset.scrollIntoView()
-				change_curr_stdin(components.main_stdin)
+				setTimeout(() => change_curr_stdin(components.main_stdin))
 			}
 
 			/**
-			 * Resets the keyboard events attached to the main STDIN and checks if there were any changes
-			 * made to the configuration (prompt_user & prompt_symbol).
+			 * Checks if there were any changes made to the configuration (prompt_user & prompt_symbol).
 			 */
 			function reload_main_stdin() {
-				hide_main_stdin()
 				components.prompt_user.innerText = `[${config.prompt_user}]`
 				components.prompt_symbol.innerText = config.prompt_symbol
-				show_main_stdin()
 			}
 
 			return {
@@ -471,6 +513,7 @@ define([
 
 				/* stdin methods */
 				read_textarea: read_textarea,
+				read_line: read_line,
 
 				/* getters */
 				get_installed_commands: get_installed_commands,

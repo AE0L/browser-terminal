@@ -1,6 +1,11 @@
 @font-face {
-	font-family: 'Inconsolata';
+	font-family: 'bold';
 	src: url('./fonts/Inconsolata-Bold.ttf') format('truetype');
+}
+
+@font-face {
+	font-family: 'regular';
+	src: url('./fonts/Inconsolata-Regular.ttf') format('truetype');
 }
 
 * {
@@ -10,21 +15,24 @@
 body, html { 
 	margin: 0;
 	height: 100%;
-	font-family: 'Inconsolata', monospace;
 }
 
 :root {
+	--config-font_weight: 'regular';
 	--config-font_size: 17px;
-	--config-foreground: #FFFFFF;
-	--config-background: #121212;
+	--config-background: #091016;
+	--config-foreground: #C6C8C7;
 	--config-margins_sides: 16px;
 	--config-input-display: 'grid';
-	--config-prompt_color: #4be14b;
-	--config-error_source_color: rgb(255, 80, 80);
-	--config-error_code_color: rgb(255, 255, 80);
+	--config-prompt_user_color: #449DA1;
+	--config-prompt_symbol_color: #85C1B9;
+	--config-error_source_color: #C53535;
+	--config-error_code_color: #F98058;
+	--config-secondary_color: #608460;
 }
 
 body {
+	font-family: var(--config-font_weight);
 	padding-bottom: var(--config-font_size);
 	background: var(--config-background);
 }
@@ -64,18 +72,18 @@ body::-webkit-scrollbar-thumb {
 }
 
 .prompt > .user-name {
-	color: var(--config-prompt_color);
+	color: var(--config-prompt_user_color);
 }
 
 .prompt > .prompt-symbol {
-	color: white;
+	color: var(--config-prompt_symbol_color);
 }
 
 .hide-stdin {
 	display: none !important;
 }
 
-#main-stdin {
+.stdin {
 	font-size: var(--config-font_size);
 	font-family: inherit;
 	outline: 0;
@@ -104,6 +112,15 @@ body::-webkit-scrollbar-thumb {
 	grid-template-columns: 1fr;
 	align-items: center;
 	height: var(--config-font_size);
+	width: 100%;
+}
+
+.label {
+	font-family: inherit;
+	background: inherit;
+	height: var(--config-font_size);
+	color: var(--config-secondary_color);
+	margin: 0;
 }
 
 textarea {
@@ -115,11 +132,15 @@ textarea {
 	overflow: hidden;
 	outline: none;
 	border: 0;
-	border-bottom: 1px solid rgba(200, 200, 200, 0.5);
+	border-bottom: 1px solid var(--config-secondary_color);
 	padding: 0;
 	line-height: var(--config-font_size);
 	width: 100%;
 	resize: none;
+}
+
+textarea:disabled {
+	border: 0;
 }
 
 .error {

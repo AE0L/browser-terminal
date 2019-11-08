@@ -3,6 +3,24 @@ define([
 ], (storage) => {
 	return {
 		modules: [{
+				name: 'test',
+				help: '',
+				run: function() {
+					return new Promise((resolve, reject) => {
+						const terminal = this.terminal
+
+						terminal.read_line('Name:').then((input) => {
+							terminal.print(`Your name is: ${input}`)
+							return resolve()
+						}).catch((err) => {
+							return resolve()
+						})
+					})
+				}
+			},
+
+
+			{
 				name: 'clear',
 				aliases: ['cls', 'clr'],
 				help: `~Command Help
@@ -34,6 +52,7 @@ define([
 					~    config font-size = 24px
 					~    config -c foreground= rgb(17, 17, 17, 0.5)
 					~    config prompt_symbol = #
+					~~The only configuration that has specific values is 'font_weight'. Possible values are bold and regular.
 					~~There are two ways to view all configuration:
 					~~    config
 					~    config -v
@@ -160,13 +179,18 @@ define([
 								let key = getKey()
 
 								const default_config = {
-									background: '#121212',
-									foreground: '#FFFFFF',
+									background: '#091016',
+									foreground: '#C6C8C7',
 									font_size: '17px',
+									font_weight: 'regular',
 									margin_sides: '16px',
-									prompt_color: '#4be14b',
+									prompt_user_color: '#449DA1',
 									prompt_symbol: '$',
 									prompt_user: 'Guest',
+									prompt_symbol_color: '#85C1B9',
+									error_source_color: '#C53535',
+									error_code_color: '#F98058',
+									secondary_color: '#608460',
 									max_buffer: 50,
 									max_history: 10,
 									tab_size: 2

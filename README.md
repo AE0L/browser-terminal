@@ -20,6 +20,20 @@ To see a list of built-in commands type `help`.
 
 
 
+## Screenshots
+
+* Sample help command
+
+![](./docs/screenshot(1).png)
+
+
+
+* Sample note creation command
+
+![](./docs/screenshot(2).png)
+
+
+
 ## Built With
 
 * JavaScript 

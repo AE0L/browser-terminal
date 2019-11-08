@@ -10,27 +10,28 @@ define([
 		Terminal.prototype = (function(dom, styles, storage) {
 			let config = {}
 
-			// f-state
 			let states = {
 				curr_buffer: 0,
 				curr_history: 0,
 				history: [],
 			}
 
-			// f-components
+			/**
+			 * The HTML elements used by the terminal.
+			 */
 			let components = {
 				main_stdin_cont: dom.getById('input-cont'),
-				bottom_offset: dom.getById('bottom-offset'),
 				main_stdin: dom.getById('main-stdin'),
+				curr_stdin: null,
 				prompt_user: dom.getById('main-stdin-user'),
 				prompt_symbol: dom.getById('main-stdin-symbol'),
-				curr_stdin: null,
+				bottom_offset: dom.getById('bottom-offset'),
 				stdout: dom.getById('stdout'),
-				main_stdin_user: dom.getById('main-stdin-user'),
-				main_stdin_prompt: dom.getById('main-stdin-prompt'),
 			}
 
-			// f-commands
+			/**
+			 * Contains the all the commands included in the terminal.
+			 */
 			let commands = {
 				installed: {},
 				aliases: [],
@@ -61,9 +62,9 @@ define([
 				}
 			}
 
-			/* ======================================================================================== */
-			/* Public */
-			// f-checkconfigkey
+			/**
+			 * Checks if the key can be found on the available configuration.
+			 */
 			function check_config_key(key) {
 				return new Promise((resolve, reject) => {
 					if (config[key] !== undefined)
@@ -73,9 +74,10 @@ define([
 				})
 			}
 
-			/* ======================================================================================== */
-			/* Private */
-			//f-setconfig
+			/**
+			 * Sets the value of a key in the configuration. Updates the CSS variables and reload the main
+			 * STDIN.
+			 */
 			function set_config(key, value) {
 				return new Promise((resolve, reject) => {
 					config[key] = value
@@ -87,15 +89,16 @@ define([
 				})
 			}
 
-			/* ======================================================================================== */
-			/* Private */
-			// f-getinstalledcommands
+			/**
+			 * Get the names of the installed commands in the terminal.
+			 */
 			function get_installed_commands() {
 				return Object.keys(commands.installed)
 			}
 
-			/* ======================================================================================== */
-			/* Private */
+			/**
+			 * Gets the help(String) of the specified command.
+			 */
 			function get_command_help(command) {
 				return new Promise((resolve, reject) => {
 					const help = commands.help(command)
@@ -107,16 +110,18 @@ define([
 				})
 			}
 
-			/* ======================================================================================== */
-			/* Public */
-			// f-getconfig
+			/**
+			 * Gets the terminal's configuration
+			 */
 			function get_config() {
 				return config
 			}
 
-			/* ======================================================================================== */
-			/* Public */
-			// f-setup
+
+			/**
+			 * Must be run first before doing anything with the terminal. Retrieves the configuration in 
+			 * Local Storage if there is any and setups the main STDIN.
+			 */
 			function setup() {
 				const _config = storage.retrieve('terminal-config')
 
@@ -141,25 +146,20 @@ define([
 
 				Object.keys(config).forEach(key => set_config(key, config[key]))
 
-				// components.prompt_user.innerText = `[${config.prompt_user}]`
-				// components.prompt_symbol.innerText = config.prompt_symbol
-
 				reload_main_stdin()
 
 				change_curr_stdin(components.main_stdin)
 			}
 
-			/* ======================================================================================== */
-			/* Private */
-			// f-changecurrstdin
+			/**
+			 * Changes the current used STDIN and any click events will focus it. If the STDIN is the main
+			 * STDIN, it will add the correct keyboard events.
+			 */
 			function change_curr_stdin(stdin) {
 				components.curr_stdin = stdin
 
 				if (stdin !== null) {
 					document.onclick = () => components.curr_stdin.focus()
-
-					/* TODO tab autocomplete function */
-					// components.curr_stdin.onkeydown = function(e) {}
 
 					if (stdin === components.main_stdin) {
 						document.onkeydown = (e) => {
@@ -187,9 +187,11 @@ define([
 				}
 			}
 
-			/* ======================================================================================== */
-			/* Public */
-			// f-runcommand
+			/**
+			 * Checks first if the command is valid. If valid, runs a Promise Race with the run method of
+			 * the specified command and the cancel Promise, which will resolve if 'CTRL+C' is pressed. If
+			 * the command throws an error or reject, display it in the terminal.
+			 */
 			function run_command(input, quiet) {
 				if (quiet === false) {
 					display_command(input)
@@ -205,6 +207,7 @@ define([
 					const key_handler = (e) => {
 						if (e.ctrlKey && (e.key === 'c' || e.key === 'C')) {
 							document.removeEventListener('keydown', key_handler)
+
 							return resolve()
 						}
 					}
@@ -216,18 +219,17 @@ define([
 
 				if (commands.valid(command)) {
 					hide_main_stdin()
-					Promise.race([commands.get(command).run(input), cancel_command]).then(
-						() => {
+
+					Promise.race([commands.get(command).run(input), cancel_command])
+						.catch((err) => {
+							console.log('err: ', err)
+							error(command, err.code, err.details)
+						})
+						.then(() => {
+							console.log('command finished')
 							remove_cancel_listener()
 							show_main_stdin()
-						},
-
-						(err) => {
-							console.log(err)
-							error(command, err.code, err.details)
-							show_main_stdin()
-						}
-					)
+						})
 				} else if (command === '') {
 					show_main_stdin()
 				} else {
@@ -236,9 +238,9 @@ define([
 				}
 			}
 
-			/* ======================================================================================== */
-			/* Private */
-			// f-addtohistory
+			/**
+			 * Add the input to the terminal's history state.
+			 */
 			function add_to_history(input) {
 				states.history.unshift(input)
 				states.curr_history = -1
@@ -247,6 +249,9 @@ define([
 				}
 			}
 
+			/**
+			 * Cycles down in the terminal's history
+			 */
 			function history_down() {
 				if (states.curr_history - 1 >= 0) {
 					states.curr_history -= 1
@@ -259,6 +264,9 @@ define([
 				}
 			}
 
+			/**
+			 * Cycles up in the termina's history
+			 */
 			function history_up() {
 				if (states.curr_history + 1 < states.history.length) {
 					states.curr_history += 1
@@ -268,15 +276,15 @@ define([
 				}
 			}
 
-
-			/* ======================================================================================== */
-			/* Public */
-			// f-install
+			/**
+			 * Installs the package and its command modules. If a module contains aliases add it to the
+			 * aliases directory.
+			 */
 			function install(terminal, package) {
 				package.modules.forEach(module => {
-          module.terminal = terminal
-          
-          if (module.aliases) {
+					module.terminal = terminal
+
+					if (module.aliases) {
 						module.aliases.forEach(alias => {
 							commands.aliases.push(`${alias}=${module.name}`)
 						})
@@ -286,11 +294,9 @@ define([
 				})
 			}
 
-			/* ======================================================================================== */
-			/* Terminal Display Methods
-			/* ======================================================================================== */
-			/* Public */
-			// f-clear
+			/**
+			 * Clears the STDOUT by removing all children node.
+			 */
 			function clear() {
 				const stdout = components.stdout
 
@@ -300,30 +306,31 @@ define([
 				states.curr_buffer = 0
 			}
 
-			/* ======================================================================================== */
-			/* Public */
-			// f-print
+			/**
+			 * Prints the given text to the STDOUT
+			 */
 			function print(text) {
 				const line = document.createElement('pre')
 				line.classList.add('line')
 				line.appendChild(document.createTextNode(text))
 				append_stdout(line)
+				components.bottom_offset.scrollIntoView()
 			}
 
-			/* ======================================================================================== */
-			/* Public */
-			// f-newline
+			/**
+			 * Adds a empty line in the STDOUT
+			 */
 			function new_line() {
 				const line = document.createElement('pre')
 				line.classList.add('line')
 				append_stdout(line)
+				components.bottom_offset.scrollIntoView()
 			}
 
-			/* ======================================================================================== */
-			/* Standard Inputs Method 
-			/* ======================================================================================== */
-			/* Public */
-			// f-readtextarea
+			/**
+			 * Add a Textarea in the STDOUT. If `SHIFT+Enter` was pressed it will resolve and return the
+			 * textarea's current value. Accepts a text parameter for the initial value of the textarea.
+			 */
 			function read_textarea(text) {
 				hide_main_stdin()
 				return new Promise((resolve, reject) => {
@@ -360,9 +367,9 @@ define([
 				})
 			}
 
-			/* ======================================================================================== */
-			/* Private */
-			// f-error
+			/**
+			 * Display the error source, error code (If specified), and the error details in the terminal.
+			 */
 			function error(source, code, details) {
 				const err_cont = document.createElement('div')
 				const err_source = document.createElement('pre')
@@ -391,9 +398,9 @@ define([
 				append_stdout(err_cont)
 			}
 
-			/* ======================================================================================== */
-			/* Private */
-			// f-displaycommand
+			/**
+			 * Displays the submitted input from the main STDIN.
+			 */
 			function display_command(command) {
 				const display = document.createElement('div')
 				const input = document.createElement('pre')
@@ -416,26 +423,26 @@ define([
 				append_stdout(display)
 			}
 
-			/* ======================================================================================== */
-			/* Private */
-			// f-appendstdout
+			/**
+			 * Append the given HTML node to the STDOUT
+			 */
 			function append_stdout(node) {
 				components.stdout.appendChild(node)
 				if (++states.curr_buffer > config.max_buffer)
 					components.stdout.removeChild(stdout.firstChild)
 			}
 
-			/* ======================================================================================== */
-			/* Private */
-			// f-hidemaindstdin
+			/**
+			 * Hides the main STDIN and remove all keyboard events attached to it.
+			 */
 			function hide_main_stdin() {
 				components.main_stdin_cont.classList.add('hide-stdin')
 				change_curr_stdin(null)
 			}
 
-			/* ======================================================================================== */
-			/* Private */
-			// f-showmainstdin
+			/**
+			 * Shows the main STDIN and re-enables all keyboard events attached to it.
+			 */
 			function show_main_stdin() {
 				components.main_stdin_cont.classList.remove('hide-stdin')
 				components.main_stdin.value = ''
@@ -443,37 +450,33 @@ define([
 				change_curr_stdin(components.main_stdin)
 			}
 
-			/* ======================================================================================== */
-			/* Private */
-			// f-reloadmainstdin
+			/**
+			 * Resets the keyboard events attached to the main STDIN and checks if there were any changes
+			 * made to the configuration (prompt_user & prompt_symbol).
+			 */
 			function reload_main_stdin() {
+				hide_main_stdin()
 				components.prompt_user.innerText = `[${config.prompt_user}]`
 				components.prompt_symbol.innerText = config.prompt_symbol
+				show_main_stdin()
 			}
 
-			/* ======================================================================================== */
-			/* Testing function */
-			// f-test
-			function test() {
-				console.log({ config: config, states: states, commands: commands })
-			}
-
-			/* ======================================================================================== */
 			return {
 				constructor: Terminal,
 
-				/* display methods */
+				/* stdout methods */
 				clear: clear,
 				print: print,
 				new_line: new_line,
+
+				/* stdin methods */
 				read_textarea: read_textarea,
 
 				/* getters */
 				get_installed_commands: get_installed_commands,
 				get_command_help: get_command_help,
-				get_config: get_config,
 
-				/* core function */
+				/* terminal core methods */
 				setup: setup,
 				install: function(module) { install(this, module) },
 				run_command: run_command,
@@ -482,11 +485,7 @@ define([
 				get_config: get_config,
 				check_config_key: check_config_key,
 				set_config: set_config,
-
-				/* test functions */
-				test: test,
 			}
-
 		})(dom, styles, storage)
 
 		return Terminal

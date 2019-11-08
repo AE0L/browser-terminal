@@ -22,6 +22,7 @@ define([
 				help: `~Command Help:
 					~~Command: config
 					~Details: Change or view the terminal's configuration.
+					~Aliases: 'cls', 'clr'
 					~Usage:   config [command] [key=value pair]
 					~Commands:
 					~~    -v   view the configuration.

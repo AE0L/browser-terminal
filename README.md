@@ -28,7 +28,7 @@ To see a list of built-in commands type `help`.
 
 
 
-* Sample note creation command
+* Sample command error
 
 ![](./docs/screenshot(2).png)
 

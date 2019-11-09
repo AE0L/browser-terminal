@@ -3,54 +3,71 @@ define([
 ], (storage) => {
   return {
     modules: [{
-        name: 'test',
-        help: '',
+        name: 'music',
+        help: `~Command Help
+              ~~Command: music
+              ~Details: plays song/s from the user's machine.
+              ~Usage:   music~`,
         run: function() {
           return new Promise((resolve, reject) => {
             const terminal = this.terminal
 
-            terminal.read_files(true, ['.mp3']).then((files) => {
-              console.log(files)
-              const audio = new Audio()
-              const reader = new FileReader()
-              const songs = files.length
-              let index = 0
-              let duration
+            function shuffle(songs) {
+              let random = Array.from(songs)
+              for (var i = random.length - 1; i > 0; i--) {
+                var j = Math.floor(Math.random() * (i + 1));
+                var temp = random[i];
+                random[i] = random[j];
+                random[j] = temp;
+              }
+              return random
+            }
 
-              reader.onload = function(e) {
+            terminal.read_files(true, ['.mp3']).then((files) => {
+              if (!files) return resolve()
+              const reader = new FileReader()
+              let index = 0
+              files = shuffle(files)
+
+              reader.onload = (e) => {
+                console.log('file loaded')
+                const audio = new Audio()
+                const actx = new(window.AudioContext || window.webkitAudioContext)()
+                const src = actx.createMediaElementSource(audio)
+                const fader = actx.createGain()
+
+                src.connect(fader).connect(actx.destination)
+
                 audio.src = e.target.result
-                audio.onloadedmetadata = () => {
-                  duration = audio.duration
-                  audio.play()
+
+                audio.onloadedmetadata = function() {
+                  const duration = audio.duration
+
+                  this.onplay = () => {
+                    console.log('actx: ', actx.currentTime)
+                    console.log('fader: ', fader.context.currentTime)
+                    fader.gain.setValueAtTime(0.0, 0.0)
+                    fader.gain.linearRampToValueAtTime(0.75, 4.0)
+                    fader.gain.linearRampToValueAtTime(0.75, duration - 5.0)
+                    fader.gain.linearRampToValueAtTime(0.00, duration)
+                  }
+
+                  this.play()
+                }
+
+                audio.onended = () => {
+                  index += 1
+
+                  if (index < files.length)
+                    reader.readAsDataURL(files[index])
                 }
               }
 
-              reader.readAsDataURL(files[0])
-
-              const actx = new AudioContext()
-              const gainFade = actx.createGain();
-              const src = actx.createMediaElementSource(audio)
-
-              src.connect(gainFade).connect(actx.destination);
-
-              audio.onplay = function() {
-                console.log('play')
-                gainFade.gain.setValueAtTime(0, 0);
-                gainFade.gain.linearRampToValueAtTime(1.0, 5.0);
-                gainFade.gain.linearRampToValueAtTime(1.0, duration - 6.0)
-                gainFade.gain.linearRampToValueAtTime(0.0, duration - 5.0);
-              }
-
-              setInterval(() => console.log(`volume: ${gainFade.gain.value}`), 250)
-
-              audio.onended = () => {
-                index++
-                if (index <= songs)
-                  reader.readAsDataURL(files[index])
-              }
+              reader.readAsDataURL(files[index])
 
               return resolve()
             }).catch((err) => {
+              console.log(err)
               return resolve()
             })
           })
@@ -76,28 +93,28 @@ define([
       {
         name: 'config',
         help: `~Command Help:
-                    ~~Command: config
-                    ~Details: Change or view the terminal's configuration.
-                    ~Aliases: 'cls', 'clr'
-                    ~Usage:   config [command] [key=value pair]
-                    ~Commands:
-                    ~~    -v   view the configuration.
-                    ~    -c   change a value of a key
-                    ~    -r   resets the whole configuration or a specific key.
-                    ~~To change a key in the configuration, specify the key and the new value. Colors and Measurements
-                    ~must be a valid CSS value. 
-                    ~~    config -c background=#ffffff
-                    ~    config font-size = 24px
-                    ~    config -c foreground= rgb(17, 17, 17, 0.5)
-                    ~    config prompt_symbol = #
-                    ~~The only configuration that has specific values is 'font_weight'. Possible values are bold and regular.
-                    ~~There are two ways to view all configuration:
-                    ~~    config
-                    ~    config -v
-                    ~~To reset a specific configuration, specify the key:
-                    ~~    config -r prompt_color
-                    ~~To reset the whole configuration, run without a key:
-                    ~~    config -r~`,
+              ~~Command: config
+              ~Details: Change or view the terminal's configuration.
+              ~Aliases: 'cls', 'clr'
+              ~Usage:   config [command] [key=value pair]
+              ~Commands:
+              ~~    -v   view the configuration.
+              ~    -c   change a value of a key
+              ~    -r   resets the whole configuration or a specific key.
+              ~~To change a key in the configuration, specify the key and the new value. Colors and Measurements
+              ~must be a valid CSS value. 
+              ~~    config -c background=#ffffff
+              ~    config font-size = 24px
+              ~    config -c foreground= rgb(17, 17, 17, 0.5)
+              ~    config prompt_symbol = #
+              ~~The only configuration that has specific values is 'font_weight'. Possible values are bold and regular.
+              ~~There are two ways to view all configuration:
+              ~~    config
+              ~    config -v
+              ~~To reset a specific configuration, specify the key:
+              ~~    config -r prompt_color
+              ~~To reset the whole configuration, run without a key:
+              ~~    config -r~`,
         error_codes: {
           C01: {
             code: 'C01',
@@ -120,19 +137,18 @@ define([
             details: 'error occured while changing the configuration, please try again'
           }
         },
-        run: function(input) {
+        run: function(args) {
           return new Promise((resolve, reject) => {
             const terminal = this.terminal
             const config = terminal.get_config()
             const keys = Object.keys(config)
-            let args = input.split(' ')
             let target
             let pair
 
             const valid = () => {
               const hasExcessArgs = () => args.filter(x => /^-[vcr]$/.test(x)).length !== 0
 
-              if (args[0].match(/^-[vcr]$/)) {
+              if (args[0] && args[0].match(/^-[vcr]$/)) {
                 target = args.shift()
 
                 if (!hasExcessArgs()) {
@@ -283,9 +299,9 @@ define([
               ~~Command: echo
               ~Details: prints a string on the terminal.
               ~Usage:   echo string~`,
-        run: function(text) {
+        run: function(args) {
           return new Promise((resolve, reject) => {
-            this.terminal.print(text)
+            this.terminal.print(args.join(' '))
             return resolve()
           })
         }
@@ -294,9 +310,9 @@ define([
       {
         name: 'help',
         help: `~Command Help
-                    ~~Command: help
-                    ~Details: displays all registered commands on the terminal or display a specific command info.
-                    ~Usage:   help [command]~`,
+              ~~Command: help
+              ~Details: displays all registered commands on the terminal or display a specific command info.
+              ~Usage:   help [command]~`,
         error_codes: {
           H01: {
             code: 'H01',
@@ -304,16 +320,15 @@ define([
           }
         },
 
-        run: function(command) {
+        run: function(args) {
           return new Promise((resolve, reject) => {
             const terminal = this.terminal
-            const args = command.split(' ')
 
-            if (args.length === 1 && args[0] === '') {
+            if (!args[0]) {
               terminal.new_line()
               terminal.print('This is the help page. Here are the registered commands:')
               terminal.new_line()
-              terminal.get_installed_commands().forEach(command => { terminal.print(`${command}`) })
+              terminal.get_installed_commands().sort().forEach(command => { terminal.print(`${command}`) })
               terminal.new_line()
               terminal.print(`Type 'help [command]' for more info`)
               terminal.new_line()
@@ -344,25 +359,25 @@ define([
         name: 'notes',
         aliases: ['nts', 'note'],
         help: `~Command help
-                    ~~Command: notes
-                    ~Aliases: note, nts
-                    ~Details: create and st,re notes in the terminal. Notes are saved through sessions.
-                    ~Usage:   notes [command] note name
-                    ~Commands:
-                    ~~    -c   create a new note
-                    ~    -e   edit a note
-                    ~    -r   read a note
-                    ~    -d   delete a note
-                    ~    -l   list all notes
-                    ~~Create a note named 'to-do-list'.
-                    ~~    notes -c to-do-list
-                    ~    notes -c my to-do list
-                    ~~Edit a note (To save the current note press 'SHIFT + ENTER').
-                    ~~    notes -e to-do-list
-                    ~~You can also use without a argument. If the note name already exists it will read its content,
-                    ~if not, it will create a new note.
-                    ~~    notes new note    (will create a new note named 'new note')
-                    ~    notes recent-note (if note exists, it will display its content)~`,
+              ~~Command: notes
+              ~Aliases: note, nts
+              ~Details: create and st,re notes in the terminal. Notes are saved through sessions.
+              ~Usage:   notes [command] note name
+              ~Commands:
+              ~~    -c   create a new note
+              ~    -e   edit a note
+              ~    -r   read a note
+              ~    -d   delete a note
+              ~    -l   list all notes
+              ~~Create a note named 'to-do-list'.
+              ~~    notes -c to-do-list
+              ~    notes -c my to-do list
+              ~~Edit a note (To save the current note press 'SHIFT + ENTER').
+              ~~    notes -e to-do-list
+              ~~You can also use without a argument. If the note name already exists it will read its content,
+              ~if not, it will create a new note.
+              ~~    notes new note    (will create a new note named 'new note')
+              ~    notes recent-note (if note exists, it will display its content)~`,
         error_codes: {
           N01: {
             code: null,
@@ -384,10 +399,9 @@ define([
             details: 'The note already exists, try another name'
           }
         },
-        run: function(command) {
+        run: function(args) {
           return new Promise((resolve, reject) => {
             const terminal = this.terminal
-            const args = command.split(' ')
             let notes = storage.retrieve('notes')
             let target
             let noteName
@@ -400,7 +414,7 @@ define([
             const valid = () => {
               const hasExcessArgs = () => args.filter(x => /^-[cerdl]$/.test(x)).length > 0
 
-              if (args[0].match(/^-[cerdl]$/)) {
+              if (args[0] && args[0].match(/^-[cerdl]$/)) {
                 target = args.shift()
 
                 if (!hasExcessArgs()) {
@@ -427,6 +441,7 @@ define([
 
               const createNote = () => {
                 if (!findNote()) {
+                  terminal.new_line()
                   terminal.read_textarea(`Title: ${noteName}`).then((input) => {
                     notes.list.push({ name: noteName, note: input })
                     storage.store('notes', notes)

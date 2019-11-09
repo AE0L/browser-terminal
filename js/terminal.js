@@ -1,10 +1,6 @@
-define([
-    'utilities/htmlDom',
-    'utilities/styles',
-    'utilities/storage'
-  ],
-
-  (dom, styles, storage) => {
+define(
+  ['utilities/htmlDom', 'utilities/styles', 'utilities/storage'],
+  function(dom, styles, storage) {
     function Terminal() {}
 
     Terminal.prototype = (function(dom, styles, storage) {
@@ -37,9 +33,7 @@ define([
         aliases: [],
 
         valid: function(command) {
-          let valid = false
-
-          if (this.installed[command] !== undefined) {
+          if (this.installed[command]) {
             return true
           } else {
             return this.aliases.filter(alias => alias.split('=')[0] === command).length !== 0
@@ -53,9 +47,9 @@ define([
         get: function(command) {
           let search = this.installed[command]
 
-          if (search === undefined) {
-            command = this.aliases.filter(alias => alias.split('=')[0] === command)[0].split('=')[1]
-            search = this.installed[command]
+          if (!search) {
+            search = this.aliases.filter(alias => alias.split('=')[0] === command)[0].split('=')[1]
+            search = this.installed[search]
           }
 
           return search
@@ -63,20 +57,10 @@ define([
       }
 
       /**
-       * Checks if the key can be found on the available configuration.
-       */
-      function check_config_key(key) {
-        return new Promise((resolve, reject) => {
-          if (config[key] !== undefined)
-            return resolve()
-          else
-            return reject()
-        })
-      }
-
-      /**
        * Sets the value of a key in the configuration. Updates the CSS variables and reload the main
        * STDIN.
+       * @param {String} key - Configuration key to be changed.
+       * @param {String|Number} value - New value of the key specified.
        */
       function set_config(key, value) {
         return new Promise((resolve, reject) => {
@@ -97,7 +81,8 @@ define([
       }
 
       /**
-       * Gets the help(String) of the specified command.
+       * Gets the help/manual of the specified command.
+       * @param {String} command - Name of the command
        */
       function get_command_help(command) {
         return new Promise((resolve, reject) => {
@@ -117,10 +102,9 @@ define([
         return config
       }
 
-
       /**
        * Must be run first before doing anything with the terminal. Retrieves the configuration in 
-       * Local Storage if there is any and setups the main STDIN.
+       * Local Storage, if there is any, and setups the main STDIN.
        */
       function setup() {
         const _config = storage.retrieve('terminal-config')
@@ -150,29 +134,33 @@ define([
         }
 
         Object.keys(config).forEach(key => set_config(key, config[key]))
-
         reload_main_stdin()
-
         change_curr_stdin(components.main_stdin)
       }
 
       /**
        * Changes the current used STDIN and any click events will focus it. If the STDIN is the main
        * STDIN, it will add the correct keyboard events.
+       * @param {Input} stdin - Input element that the terminal will focus on.
        */
       function change_curr_stdin(stdin) {
-        if (components.curr_stdin)
+        if (components.curr_stdin) {
           components.curr_stdin.disabled = true
+        }
+
         components.curr_stdin = stdin
 
-        if (stdin !== null) {
-          document.onclick = () => components.curr_stdin.focus()
+        if (stdin) {
+          document.onclick = () => {
+            components.curr_stdin.focus()
+            components.curr_stdin.click()
+          }
 
           if (stdin === components.main_stdin) {
             components.main_stdin.disabled = false
             document.onkeydown = (e) => {
               if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey) {
-                run_command(components.curr_stdin.value, false)
+                run_command(components.curr_stdin.value, false).then(() => show_main_stdin())
               } else if (e.key === 'Tab') {
                 e.preventDefault()
                 e.target.value = `${e.target.value}${' '.repeat(config.tab_size)}`
@@ -199,17 +187,18 @@ define([
        * Checks first if the command is valid. If valid, runs a Promise Race with the run method of
        * the specified command and the cancel Promise, which will resolve if 'CTRL+C' is pressed. If
        * the command throws an error or reject, display it in the terminal.
+       * @param {String} input - Input from the main STDIN.
+       * @param {Boolean} quiet - If true, do not display a copy of the command line input.
        */
-      function run_command(input, quiet) {
-        if (quiet === false) {
+      async function run_command(input, quiet) {
+        if (!quiet) {
           display_command(input)
         }
 
         add_to_history(input)
 
-        input = input.split(' ')
+        input = input.trim().split(' ')
         const command = input.shift()
-        input = input.join(' ').trim()
 
         const cancel_command = () => new Promise(resolve => {
           const key_handler = (e) => {
@@ -223,12 +212,14 @@ define([
           document.addEventListener('keydown', key_handler, false)
         })
 
-        const remove_cancel_listener = () => document.dispatchEvent(new KeyboardEvent('keydown', { key: 'c', ctrlKey: true }))
+        const remove_cancel_listener = () => (
+          document.dispatchEvent(new KeyboardEvent('keydown', { key: 'c', ctrlKey: true }))
+        )
 
         if (commands.valid(command)) {
           hide_main_stdin()
 
-          Promise.race([commands.get(command).run(input), cancel_command()])
+          await Promise.race([commands.get(command).run(input), cancel_command()])
             .catch((err) => {
               console.log(err)
               error(command, err.code, err.details)
@@ -238,15 +229,15 @@ define([
               show_main_stdin()
             })
         } else if (command === '') {
-          show_main_stdin()
+          return
         } else {
           error('Terminal', null, 'command not found...')
-          show_main_stdin()
         }
       }
 
       /**
        * Add the input to the terminal's history state.
+       * @param {String} input - Input from the main stdin.
        */
       function add_to_history(input) {
         states.history.unshift(input)
@@ -286,6 +277,8 @@ define([
       /**
        * Installs the package and its command modules. If a module contains aliases add it to the
        * aliases directory.
+       * @param {Terminal} terminal - Terminal where to install the module
+       * @param {Object} package - Command package that contains one or more command.
        */
       function install(terminal, package) {
         package.modules.forEach(module => {
@@ -410,20 +403,35 @@ define([
         })
       }
 
+      /**
+       * Open a file chooser for uploading files.
+       * @param {Boolean} multiple - If true, allow user to select multiple files.
+       * @param {Array} file_types - Array of file types the user can select.
+       */
       function read_files(multiple, file_types) {
         return new Promise((resolve, reject) => {
           const input = dom.create('input')
+          input.value = null
           input.type = 'file'
           input.multiple = multiple || false
           input.accept = file_types ? file_types.join(',') : ''
 
-          function file_handler() {
-            setTimeout(() => { return resolve(this.files) }, 50)
+          input.onclick = () => {
+            function check_files() {
+              setTimeout(() => {
+                if (input.files.length === 0) {
+                  return resolve(null)
+                } else {
+                  return resolve(input.files)
+                }
+              }, 100)
+            }
+
+            window.addEventListener('focus', check_files, { once: true })
           }
 
-          input.addEventListener('change', file_handler, true)
-
           input.click()
+          change_curr_stdin(input)
         })
       }
 
@@ -469,6 +477,9 @@ define([
 
       /**
        * Display the error source, error code (If specified), and the error details in the terminal.
+       * @param {String} source - Command that invoked an error.
+       * @param {String} code - Error code from the source.
+       * @param {details} details - Info about the error.
        */
       function error(source, code, details) {
         const err_cont = document.createElement('div')
@@ -499,7 +510,8 @@ define([
       }
 
       /**
-       * Displays the submitted input from the main STDIN.
+       * Display the recent input from the main STDIN.
+       * @param {String} command - Input from the command line.
        */
       function display_command(command) {
         const display = document.createElement('div')
@@ -525,6 +537,7 @@ define([
 
       /**
        * Append the given HTML node to the STDOUT
+       * @param {DOM Element} node - Element to be appended.
        */
       function append_stdout(node) {
         components.stdout.appendChild(node)
@@ -572,18 +585,17 @@ define([
         read_char: read_char,
         read_files: read_files,
 
-        /* getters */
-        get_installed_commands: get_installed_commands,
-        get_command_help: get_command_help,
-
-        /* terminal core methods */
+        /* terminal methods */
         setup: setup,
         install: function(module) { install(this, module) },
         run_command: run_command,
 
-        /* config functions */
+        /* commands */
+        get_installed_commands: get_installed_commands,
+        get_command_help: get_command_help,
+
+        /* config */
         get_config: get_config,
-        check_config_key: check_config_key,
         set_config: set_config,
       }
     })(dom, styles, storage)

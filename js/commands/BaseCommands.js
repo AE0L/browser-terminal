@@ -135,7 +135,7 @@ define([
           return new Promise((resolve, reject) => {
             const terminal = this.terminal
             const config = terminal.get_config()
-            const keys = Object.keys(config)
+            const keys = Object.keys(config).sort()
             let target
             let pair
 

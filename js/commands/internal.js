@@ -8,63 +8,63 @@ define([
               ~~Command: music
               ~Details: plays song/s from the user's machine.
               ~Usage:   music~`,
-        run: function() {
-          return new Promise((resolve, reject) => {
-            const terminal = this.terminal
+        run: async function() {
+          const terminal = this.terminal
+          const reader = new FileReader()
+          let files = null
+          let index = 0
 
-            function shuffle(songs) {
-              let random = Array.from(songs)
-              for (var i = random.length - 1; i > 0; i--) {
-                var j = Math.floor(Math.random() * (i + 1));
-                var temp = random[i];
-                random[i] = random[j];
-                random[j] = temp;
+          function shuffle(songs) {
+            let random = Array.from(songs)
+            for (var i = random.length - 1; i > 0; i--) {
+              var j = Math.floor(Math.random() * (i + 1));
+              var temp = random[i];
+              random[i] = random[j];
+              random[j] = temp;
+            }
+            return random
+          }
+
+          files = await terminal.read_files(true, ['.mp3'])
+
+          if (!files) return
+
+          files = shuffle(files)
+
+          terminal.print(`Playing ${files[0].name.replace(/\.[^.]+$/, '')}${files.length > 1 ? ` and ${files.length - 1} more`: ''} ...`)
+
+          reader.onload = (e) => {
+            const audio = new Audio()
+            const actx = new(window.AudioContext || window.webkitAudioContext)()
+            const src = actx.createMediaElementSource(audio)
+            const fader = actx.createGain()
+
+            src.connect(fader).connect(actx.destination)
+
+            audio.src = e.target.result
+
+            audio.onloadedmetadata = function() {
+              const duration = audio.duration
+
+              this.onplay = () => {
+                fader.gain.setValueAtTime(0.0, 0.0)
+                fader.gain.linearRampToValueAtTime(0.75, 4.0)
+                fader.gain.linearRampToValueAtTime(0.75, duration - 5.0)
+                fader.gain.linearRampToValueAtTime(0.00, duration)
               }
-              return random
+
+              this.play()
             }
 
-            terminal.read_files(true, ['.mp3']).then((files) => {
-              if (!files) return resolve()
-              const reader = new FileReader()
-              let index = 0
-              files = shuffle(files)
+            audio.onended = () => {
+              index += 1
 
-              reader.onload = (e) => {
-                const audio = new Audio()
-                const actx = new(window.AudioContext || window.webkitAudioContext)()
-                const src = actx.createMediaElementSource(audio)
-                const fader = actx.createGain()
+              if (index < files.length)
+                reader.readAsDataURL(files[index])
+            }
+          }
 
-                src.connect(fader).connect(actx.destination)
-
-                audio.src = e.target.result
-
-                audio.onloadedmetadata = function() {
-                  const duration = audio.duration
-
-                  this.onplay = () => {
-                    fader.gain.setValueAtTime(0.0, 0.0)
-                    fader.gain.linearRampToValueAtTime(0.75, 4.0)
-                    fader.gain.linearRampToValueAtTime(0.75, duration - 5.0)
-                    fader.gain.linearRampToValueAtTime(0.00, duration)
-                  }
-
-                  this.play()
-                }
-
-                audio.onended = () => {
-                  index += 1
-
-                  if (index < files.length)
-                    reader.readAsDataURL(files[index])
-                }
-              }
-
-              reader.readAsDataURL(files[index])
-
-              return resolve()
-            })
-          })
+          reader.readAsDataURL(files[index])
         }
       },
 
@@ -76,11 +76,8 @@ define([
               ~~Command: clear
               ~Details: resets the terminal's buffer and clear the screen.
               ~Usage:   clear [no-args]~`,
-        run: function() {
-          return new Promise((resolve, reject) => {
-            this.terminal.clear()
-            return resolve()
-          })
+        run: async function() {
+          this.terminal.clear()
         }
       },
 
@@ -101,7 +98,7 @@ define([
               ~    config font-size = 24px
               ~    config -c foreground= rgb(17, 17, 17, 0.5)
               ~    config prompt_symbol = #
-              ~~The only configuration that has specific values is 'font_weight'. Possible values are bold and regular.
+              ~~The only configuration that has specific values is 'font-weight'. Possible values are bold and regular.
               ~~There are two ways to view all configuration:
               ~~    config
               ~    config -v
@@ -231,16 +228,16 @@ define([
                   'error-source-color': '#C53535',
                   'prompt-user-color': '#449DA1',
                   'error-code-color': '#F98058',
-                  'prompt-symbol': '~$',
+                  'prompt-symbol': '$',
                   'margin-sides': '16px',
                   'max-history': 10,
                   'font-weight': 'regular',
-                  'prompt-user': 'Guest',
+                  'prompt-user': 'local',
                   'label-color': '#608460',
                   'background': '#091016',
                   'foreground': '#C6C8C7',
                   'max-buffer': 50,
-                  'font-size': '17px',
+                  'font-size': '16px',
                   'tab-size': 2
                 }
 
@@ -293,11 +290,8 @@ define([
               ~~Command: echo
               ~Details: prints a string on the terminal.
               ~Usage:   echo [string]~`,
-        run: function(args) {
-          return new Promise((resolve, reject) => {
-            this.terminal.print(args.join(' '))
-            return resolve()
-          })
+        run: async function(args) {
+          this.terminal.print(args.join(' '))
         }
       },
 
@@ -314,38 +308,38 @@ define([
           }
         },
 
-        run: function(args) {
-          return new Promise((resolve, reject) => {
-            const terminal = this.terminal
+        run: async function(args) {
+          const terminal = this.terminal
+          const print = (i) => terminal.print(i)
+          const newLine = () => terminal.new_line()
 
-            if (!args[0]) {
-              terminal.new_line()
-              terminal.print('This is the help page. Here are the registered commands:')
-              terminal.new_line()
-              terminal.get_installed_commands().sort().forEach(command => { terminal.print(`${command}`) })
-              terminal.new_line()
-              terminal.print(`Type 'help [command]' for more info`)
-              terminal.new_line()
-
-              return resolve()
-            } else {
-              terminal.get_command_help(args[0]).then(
-                manual => {
-                  const lines = manual.split('~').map(line => line.replace(/\r?\n|\r/, ''))
-                  lines.forEach(line => {
-                    if (line === '')
-                      terminal.new_line()
-                    else
-                      terminal.print(line)
-                  })
-
-                  return resolve()
-                },
-
-                () => reject(this.error_codes.H01)
-              )
+          if (!args[0]) {
+            newLine()
+            print('This is the help page. Here are the registered commands:')
+            newLine()
+            terminal.get_installed_commands()
+              .sort()
+              .forEach(command => print(`${command}`))
+            newLine()
+            print(`Type 'help [command]' for more info`)
+            newLine()
+          } else {
+            try {
+              const help = await terminal.get_command_help(args[0])
+              const lines = help
+                .split('~')
+                .map(line => line.replace(/\r?\n|\r/, ''))
+                .forEach(line => {
+                  if (line) {
+                    print(line)
+                  } else {
+                    newLine()
+                  }
+                })
+            } catch (err) {
+              throw (this.error_codes.H01)
             }
-          })
+          }
         }
       },
 
@@ -556,11 +550,9 @@ define([
               ~Aliases: rs
               ~Details: restart the terminal
               ~Usage:   restart~`,
-        run: function() {
-          return new Promise((resolve, reject) => {
-            this.terminal.print('restarting...')
-            document.location.reload(false)
-          })
+        run: async function() {
+          this.terminal.print('restarting...')
+          document.location.reload(false)
         }
       }
     ]

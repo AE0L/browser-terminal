@@ -1,9 +1,6 @@
-require(
-	['terminal', 'commands/BaseCommands'],
-	(Terminal, base) => {
-		const terminal = new Terminal()
+require(['terminal', 'commands/internal'], (Terminal, internal) => {
+  const terminal = new Terminal()
 
-		terminal.setup()
-		terminal.install(base)
-	}
-)
+  terminal.setup()
+  terminal.install(internal)
+})

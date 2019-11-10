@@ -19,16 +19,16 @@ body, html {
 
 :root {
 	--config-font-weight: 'regular';
-	--config-font-size: 17px;
+	--config-font-size: 16px;
 	--config-background: #091016;
 	--config-foreground: #C6C8C7;
 	--config-margin-sides: 16px;
-	--config-input-display: 'grid';
 	--config-prompt-user-color: #449DA1;
 	--config-prompt-symbol-color: #85C1B9;
 	--config-error-source-color: #C53535;
 	--config-error-code-color: #F98058;
 	--config-label-color: #608460;
+	--config-line-height: 20px;
 }
 
 body {
@@ -94,7 +94,7 @@ body::-webkit-scrollbar-thumb {
 }
 
 #bottom-offset {
-	height: var(--config-font-size);
+	height: var(--config-line-height);
 }
 
 .command {
@@ -102,7 +102,7 @@ body::-webkit-scrollbar-thumb {
 	grid-template-columns: auto 1fr;
 	align-items: center;
 	grid-column-gap: 0.5em;
-	height: var(--config-font-size);
+	height: var(--config-line-height);
 }
 
 .line {
@@ -111,14 +111,14 @@ body::-webkit-scrollbar-thumb {
 	display: grid;
 	grid-template-columns: 1fr;
 	align-items: center;
-	height: var(--config-font-size);
+	height: var(--config-line-height);
 	width: 100%;
 }
 
 .label {
 	font-family: inherit;
 	background: inherit;
-	height: var(--config-font-size);
+	height: var(--config-line-height);
 	color: var(--config-label-color);
 	margin: 0;
 }

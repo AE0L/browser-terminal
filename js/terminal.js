@@ -1,9 +1,9 @@
 define(
-  ['utilities/htmlDom', 'utilities/styles', 'utilities/storage'],
-  function(dom, styles, storage) {
+  ['utilities/htmlDom', 'utilities/styles', 'utilities/storage', 'commands/welcome'],
+  function(dom, styles, storage, welcome) {
     function Terminal() {}
 
-    Terminal.prototype = (function(dom, styles, storage) {
+    Terminal.prototype = (function(dom, styles, storage, welcome) {
       let config = {}
 
       let states = {
@@ -106,8 +106,10 @@ define(
        * Must be run first before doing anything with the terminal. Retrieves the configuration in 
        * Local Storage, if there is any, and setups the main STDIN.
        */
-      function setup() {
+      async function setup() {
         const _config = storage.retrieve('terminal-config')
+
+        show_header()
 
         if (!_config) {
           config = {
@@ -121,21 +123,21 @@ define(
             'foreground': styles.getVar('--config-foreground'),
             'font-size': styles.getVar('--config-font-size'),
             'secondary-color': '#608460',
-            'prompt-symbol': '~$',
-            'prompt-user': 'Guest',
+            'prompt-symbol': '$',
+            'prompt-user': 'local',
             'max-history': 10,
             'max-buffer': 50,
             'tab-size': 2
           }
 
           storage.store('terminal-config', config)
+          await run_intro()
         } else {
           config = _config
+          Object.keys(config).forEach(key => set_config(key, config[key]))
         }
 
-        Object.keys(config).forEach(key => set_config(key, config[key]))
-        reload_main_stdin()
-        change_curr_stdin(components.main_stdin)
+        show_main_stdin()
       }
 
       /**
@@ -327,6 +329,31 @@ define(
         line.classList.add('line')
         append_stdout(line)
         components.bottom_offset.scrollIntoView()
+      }
+
+      /**
+       * Displays terminal header on startup.
+       */
+      function show_header() {
+        print('Browser Terminal v0.5.0-beta')
+        print('Created by Aeol')
+        print('Open-sourced in Github')
+        new_line()
+      }
+
+      /**
+       * Ask for the user's name and preferred prompt symbol.
+       */
+      async function run_intro() {
+        const name = await read_line('Enter your name:')
+        const symbol = await read_line('enter prompt symbol to use (e.g. #, $, >, ~$):')
+
+        await set_config('prompt-user', name)
+        await set_config('prompt-symbol', symbol)
+
+        new_line()
+        print(`Type 'help' to see a list of available commands`)
+        new_line()
       }
 
       /**
@@ -598,7 +625,7 @@ define(
         get_config: get_config,
         set_config: set_config,
       }
-    })(dom, styles, storage)
+    })(dom, styles, storage, welcome)
 
     return Terminal
   }

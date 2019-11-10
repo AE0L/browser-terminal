@@ -111,21 +111,21 @@ define(
 
         if (!_config) {
           config = {
-            background: styles.getVar('--config-background'),
-            foreground: styles.getVar('--config-foreground'),
-            font_size: styles.getVar('--config-font_size'),
-            font_weight: styles.getVar('--config-font_weight'),
-            margin_sides: styles.getVar('--config-margins_sides'),
-            prompt_user_color: styles.getVar('--config-prompt_user_color'),
-            prompt_symbol_color: styles.getVar('--config-prompt_symbol_color'),
-            prompt_symbol: '$',
-            error_source_color: styles.getVar('--config-error_source_color'),
-            error_code_color: styles.getVar('--config-error_code_color'),
-            secondary_color: '#608460',
-            prompt_user: 'User',
-            max_buffer: 50,
-            max_history: 10,
-            tab_size: 2
+            'prompt-symbol-color': styles.getVar('--config-prompt-symbol-color'),
+            'error-source-color': styles.getVar('--config-error-source-color'),
+            'prompt-user-color': styles.getVar('--config-prompt-user-color'),
+            'error-code-color': styles.getVar('--config-error-code-color'),
+            'margin-sides': styles.getVar('--config-margin-sides'),
+            'font-weight': styles.getVar('--config-font-weight'),
+            'background': styles.getVar('--config-background'),
+            'foreground': styles.getVar('--config-foreground'),
+            'font-size': styles.getVar('--config-font-size'),
+            'secondary-color': '#608460',
+            'prompt-symbol': '~$',
+            'prompt-user': 'Guest',
+            'max-history': 10,
+            'max-buffer': 50,
+            'tab-size': 2
           }
 
           storage.store('terminal-config', config)
@@ -163,7 +163,7 @@ define(
                 run_command(components.curr_stdin.value, false).then(() => show_main_stdin())
               } else if (e.key === 'Tab') {
                 e.preventDefault()
-                e.target.value = `${e.target.value}${' '.repeat(config.tab_size)}`
+                e.target.value = `${e.target.value}${' '.repeat(config['tab-size'])}`
               } else if (e.key === 'ArrowUp') {
                 e.preventDefault()
                 e.target.value = history_up() || e.target.value
@@ -242,7 +242,7 @@ define(
       function add_to_history(input) {
         states.history.unshift(input)
         states.curr_history = -1
-        if (states.history.length > config.max_history) {
+        if (states.history.length > config['max-history']) {
           states.history.pop()
         }
       }
@@ -311,9 +311,9 @@ define(
        * @params {String} text - The text to be printed.
        */
       function print(text) {
-        const line = document.createElement('pre')
+        const line = dom.create('pre')
         line.classList.add('line')
-        line.appendChild(document.createTextNode(text))
+        line.appendChild(dom.text(text))
         append_stdout(line)
         components.bottom_offset.scrollIntoView()
       }
@@ -322,7 +322,7 @@ define(
        * Adds a empty line in the STDOUT
        */
       function new_line() {
-        const line = document.createElement('pre')
+        const line = dom.create('pre')
         line.appendChild(dom.text(' '))
         line.classList.add('line')
         append_stdout(line)
@@ -442,7 +442,7 @@ define(
       function read_textarea(text) {
         hide_main_stdin()
         return new Promise((resolve, reject) => {
-          const textarea = document.createElement('textarea')
+          const textarea = dom.create('textarea')
 
           textarea.setAttribute('spellcheck', false)
 
@@ -462,7 +462,7 @@ define(
               return resolve(this.value)
             } else if (e.key === 'Tab') {
               e.preventDefault()
-              this.value = `${this.value}${' '.repeat(config.tab_size)}`
+              this.value = `${this.value}${' '.repeat(config['tab-size'])}`
             } else {
               resize(e.target)
             }
@@ -482,21 +482,21 @@ define(
        * @param {details} details - Info about the error.
        */
       function error(source, code, details) {
-        const err_cont = document.createElement('div')
-        const err_source = document.createElement('pre')
-        const err_details = document.createElement('pre')
+        const err_cont = dom.create('div')
+        const err_source = dom.create('pre')
+        const err_details = dom.create('pre')
 
         err_cont.appendChild(err_source)
-        err_source.appendChild(document.createTextNode(`[${source}]`))
+        err_source.appendChild(dom.text(`[${source}]`))
         err_source.classList.add('error-source')
         err_source.classList.add('line')
         err_details.classList.add('line')
 
         if (code) {
-          const err_code = document.createElement('pre')
+          const err_code = dom.create('pre')
           err_code.classList.add('error-code')
           err_code.classList.add('line')
-          err_code.appendChild(document.createTextNode(`[Error Code: ${code}]`))
+          err_code.appendChild(dom.text(`[Error Code: ${code}]`))
           err_cont.appendChild(err_code)
           err_cont.classList.add('error-with-code')
         } else {
@@ -504,7 +504,7 @@ define(
         }
 
         err_cont.appendChild(err_details)
-        err_details.appendChild(document.createTextNode(details))
+        err_details.appendChild(dom.text(details))
 
         append_stdout(err_cont)
       }
@@ -514,20 +514,20 @@ define(
        * @param {String} command - Input from the command line.
        */
       function display_command(command) {
-        const display = document.createElement('div')
-        const input = document.createElement('pre')
-        const prompt = document.createElement('div')
-        const user = document.createElement('span')
-        const symbol = document.createElement('span')
+        const display = dom.create('div')
+        const input = dom.create('pre')
+        const prompt = dom.create('div')
+        const user = dom.create('span')
+        const symbol = dom.create('span')
 
         prompt.classList.add('prompt')
         prompt.appendChild(user)
         prompt.appendChild(symbol)
         user.classList.add('user-name')
-        user.appendChild(document.createTextNode(`[${config.prompt_user}]`))
+        user.appendChild(dom.text(`[${config['prompt-user']}]`))
         symbol.classList.add('prompt-symbol')
-        symbol.appendChild(document.createTextNode(config.prompt_symbol))
-        input.appendChild(document.createTextNode(command))
+        symbol.appendChild(dom.text(config['prompt-symbol']))
+        input.appendChild(dom.text(command))
         input.classList.add('line')
         display.classList.add('command')
         display.appendChild(prompt)
@@ -541,7 +541,7 @@ define(
        */
       function append_stdout(node) {
         components.stdout.appendChild(node)
-        if (++states.curr_buffer > config.max_buffer)
+        if (++states.curr_buffer > config['max-buffer'])
           components.stdout.removeChild(stdout.firstChild)
       }
 
@@ -567,8 +567,8 @@ define(
        * Checks if there were any changes made to the configuration (prompt_user & prompt_symbol).
        */
       function reload_main_stdin() {
-        components.prompt_user.innerText = `[${config.prompt_user}]`
-        components.prompt_symbol.innerText = config.prompt_symbol
+        components.prompt_user.innerText = `[${config['prompt-user']}]`
+        components.prompt_symbol.innerText = config['prompt-symbol']
       }
 
       return {

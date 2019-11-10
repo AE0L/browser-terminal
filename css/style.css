@@ -18,22 +18,22 @@ body, html {
 }
 
 :root {
-	--config-font_weight: 'regular';
-	--config-font_size: 17px;
+	--config-font-weight: 'regular';
+	--config-font-size: 17px;
 	--config-background: #091016;
 	--config-foreground: #C6C8C7;
-	--config-margins_sides: 16px;
+	--config-margin-sides: 16px;
 	--config-input-display: 'grid';
-	--config-prompt_user_color: #449DA1;
-	--config-prompt_symbol_color: #85C1B9;
-	--config-error_source_color: #C53535;
-	--config-error_code_color: #F98058;
-	--config-secondary_color: #608460;
+	--config-prompt-user-color: #449DA1;
+	--config-prompt-symbol-color: #85C1B9;
+	--config-error-source-color: #C53535;
+	--config-error-code-color: #F98058;
+	--config-label-color: #608460;
 }
 
 body {
-	font-family: var(--config-font_weight);
-	padding-bottom: var(--config-font_size);
+	font-family: var(--config-font-weight);
+	padding-bottom: var(--config-font-size);
 	background: var(--config-background);
 }
 
@@ -59,9 +59,9 @@ body::-webkit-scrollbar-thumb {
 	height: 100%;
 	padding-top: 16px;
 
-	padding-left: var(--config-margins_sides);
-	padding-right: var(--config-margins_sides);
-	font-size: var(--config-font_size);
+	padding-left: var(--config-margin-sides);
+	padding-right: var(--config-margin-sides);
+	font-size: var(--config-font-size);
 	color: var(--config-foreground);
 }
 
@@ -72,11 +72,11 @@ body::-webkit-scrollbar-thumb {
 }
 
 .prompt > .user-name {
-	color: var(--config-prompt_user_color);
+	color: var(--config-prompt-user-color);
 }
 
 .prompt > .prompt-symbol {
-	color: var(--config-prompt_symbol_color);
+	color: var(--config-prompt-symbol-color);
 }
 
 .hide-stdin {
@@ -84,7 +84,7 @@ body::-webkit-scrollbar-thumb {
 }
 
 .stdin {
-	font-size: var(--config-font_size);
+	font-size: var(--config-font-size);
 	font-family: inherit;
 	outline: 0;
 	background: transparent;
@@ -94,7 +94,7 @@ body::-webkit-scrollbar-thumb {
 }
 
 #bottom-offset {
-	height: var(--config-font_size);
+	height: var(--config-font-size);
 }
 
 .command {
@@ -102,7 +102,7 @@ body::-webkit-scrollbar-thumb {
 	grid-template-columns: auto 1fr;
 	align-items: center;
 	grid-column-gap: 0.5em;
-	height: var(--config-font_size);
+	height: var(--config-font-size);
 }
 
 .line {
@@ -111,15 +111,15 @@ body::-webkit-scrollbar-thumb {
 	display: grid;
 	grid-template-columns: 1fr;
 	align-items: center;
-	height: var(--config-font_size);
+	height: var(--config-font-size);
 	width: 100%;
 }
 
 .label {
 	font-family: inherit;
 	background: inherit;
-	height: var(--config-font_size);
-	color: var(--config-secondary_color);
+	height: var(--config-font-size);
+	color: var(--config-label-color);
 	margin: 0;
 }
 
@@ -132,9 +132,9 @@ textarea {
 	overflow: hidden;
 	outline: none;
 	border: 0;
-	border-bottom: 1px solid var(--config-secondary_color);
+	border-bottom: 1px solid var(--config-label-color);
 	padding: 0;
-	line-height: var(--config-font_size);
+	line-height: var(--config-font-size);
 	width: 100%;
 	resize: none;
 }
@@ -156,13 +156,9 @@ textarea:disabled {
 }
 
 .error-source {
-	color: var(--config-error_source_color);
+	color: var(--config-error-source-color);
 }
 
 .error-code {
-	color: var(--config-error_code_color);
-}
-
-#main-stdin-symbol:after {
-	content: var(--config-prompt_symbol);
+	color: var(--config-error-code-color);
 }

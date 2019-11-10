@@ -30,7 +30,6 @@ define([
               files = shuffle(files)
 
               reader.onload = (e) => {
-                console.log('file loaded')
                 const audio = new Audio()
                 const actx = new(window.AudioContext || window.webkitAudioContext)()
                 const src = actx.createMediaElementSource(audio)
@@ -44,8 +43,6 @@ define([
                   const duration = audio.duration
 
                   this.onplay = () => {
-                    console.log('actx: ', actx.currentTime)
-                    console.log('fader: ', fader.context.currentTime)
                     fader.gain.setValueAtTime(0.0, 0.0)
                     fader.gain.linearRampToValueAtTime(0.75, 4.0)
                     fader.gain.linearRampToValueAtTime(0.75, duration - 5.0)
@@ -65,9 +62,6 @@ define([
 
               reader.readAsDataURL(files[index])
 
-              return resolve()
-            }).catch((err) => {
-              console.log(err)
               return resolve()
             })
           })
@@ -96,7 +90,7 @@ define([
               ~~Command: config
               ~Details: Change or view the terminal's configuration.
               ~Aliases: 'cls', 'clr'
-              ~Usage:   config [command] [key=value pair]
+              ~Usage:   config [command] [key=value]
               ~Commands:
               ~~    -v   view the configuration.
               ~    -c   change a value of a key
@@ -233,21 +227,21 @@ define([
                 let key = getKey()
 
                 const default_config = {
-                  background: '#091016',
-                  foreground: '#C6C8C7',
-                  font_size: '17px',
-                  font_weight: 'regular',
-                  margin_sides: '16px',
-                  prompt_user_color: '#449DA1',
-                  prompt_symbol: '$',
-                  prompt_user: 'Guest',
-                  prompt_symbol_color: '#85C1B9',
-                  error_source_color: '#C53535',
-                  error_code_color: '#F98058',
-                  secondary_color: '#608460',
-                  max_buffer: 50,
-                  max_history: 10,
-                  tab_size: 2
+                  'prompt-symbol-color': '#85C1B9',
+                  'error-source-color': '#C53535',
+                  'prompt-user-color': '#449DA1',
+                  'error-code-color': '#F98058',
+                  'prompt-symbol': '~$',
+                  'margin-sides': '16px',
+                  'max-history': 10,
+                  'font-weight': 'regular',
+                  'prompt-user': 'Guest',
+                  'label-color': '#608460',
+                  'background': '#091016',
+                  'foreground': '#C6C8C7',
+                  'max-buffer': 50,
+                  'font-size': '17px',
+                  'tab-size': 2
                 }
 
                 if (args.length > 0) {
@@ -298,7 +292,7 @@ define([
         help: `~Command Help
               ~~Command: echo
               ~Details: prints a string on the terminal.
-              ~Usage:   echo string~`,
+              ~Usage:   echo [string]~`,
         run: function(args) {
           return new Promise((resolve, reject) => {
             this.terminal.print(args.join(' '))
@@ -362,7 +356,7 @@ define([
               ~~Command: notes
               ~Aliases: note, nts
               ~Details: create and st,re notes in the terminal. Notes are saved through sessions.
-              ~Usage:   notes [command] note name
+              ~Usage:   notes [command] <note name>
               ~Commands:
               ~~    -c   create a new note
               ~    -e   edit a note
@@ -561,7 +555,7 @@ define([
               ~~Command: restart
               ~Aliases: rs
               ~Details: restart the terminal
-              ~Usage:   restart [no-args]~`,
+              ~Usage:   restart~`,
         run: function() {
           return new Promise((resolve, reject) => {
             this.terminal.print('restarting...')

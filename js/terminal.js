@@ -332,11 +332,33 @@ define(
       }
 
       /**
+       * delete the number of lines specified.
+       */
+      async function delete_line(lines = 1) {
+        console.log(lines)
+        if (typeof lines !== 'number') {
+          throw ({ code: null, details: '[delete_line] argument provided is not of type "Number"' })
+        }
+
+        try {
+          lines += 1
+
+          while (lines-- > 0) {
+            components.stdout.removeChild(components.stdout.lastChild)
+          }
+        } catch (ignore) {
+          // This catch block will be used if STDOUT doesn't have any child nodes.
+          return
+        }
+      }
+
+      /**
        * Displays terminal header on startup.
        */
       function show_header() {
         print('Browser Terminal v0.5.0-beta')
         print('Created by Aeol')
+        print('Built with Vanilla JavaScript')
         print('Open-sourced in Github')
         new_line()
       }
@@ -496,6 +518,8 @@ define(
           }
 
           textarea.addEventListener('keydown', autosize)
+          print('Press CTRL+Enter to submit...')
+          new_line()
           append_stdout(textarea)
           resize(textarea)
           change_curr_stdin(textarea)
@@ -605,6 +629,7 @@ define(
         clear: clear,
         print: print,
         new_line: new_line,
+        delete_line: delete_line,
 
         /* stdin methods */
         read_textarea: read_textarea,

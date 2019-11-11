@@ -3,6 +3,44 @@ define([
 ], (storage) => {
   return {
     modules: [{
+        name: 'test',
+        help: '',
+        run: async function(args) {
+          print('test')
+        }
+      },
+
+      {
+        name: 'time',
+        help: `~Command Help
+              ~~Command: time
+              ~Details:  get current time and date
+              ~Usage:    time~`,
+        run: async function() {
+          const terminal = this.terminal
+          terminal.print(new Date())
+        }
+      },
+
+      {
+        name: 'js',
+        help: `~Command Help
+               ~~Command: js
+               ~Details: evaluates a JavaScript statement/s
+               ~Usage:   js~`,
+        run: async function(args) {
+          const terminal = this.terminal
+          const js = await terminal.read_textarea()
+
+          try {
+            eval(js)
+          } catch (err) {
+            throw { code: null, details: 'invalid JavaScript statement/s' }
+          }
+        }
+      },
+
+      {
         name: 'music',
         help: `~Command Help
               ~~Command: music
@@ -71,9 +109,10 @@ define([
 
       {
         name: 'clear',
-        aliases: ['cls', 'clr'],
+        aliases: ['cls'],
         help: `~Command Help
               ~~Command: clear
+              ~Alias:   cls
               ~Details: resets the terminal's buffer and clear the screen.
               ~Usage:   clear [no-args]~`,
         run: async function() {
@@ -86,7 +125,6 @@ define([
         help: `~Command Help:
               ~~Command: config
               ~Details: Change or view the terminal's configuration.
-              ~Aliases: 'cls', 'clr'
               ~Usage:   config [command] [key=value]
               ~Commands:
               ~~    -v   view the configuration.
@@ -345,10 +383,8 @@ define([
 
       {
         name: 'notes',
-        aliases: ['nts', 'note'],
         help: `~Command help
               ~~Command: notes
-              ~Aliases: note, nts
               ~Details: create and st,re notes in the terminal. Notes are saved through sessions.
               ~Usage:   notes [command] <note name>
               ~Commands:
@@ -429,7 +465,6 @@ define([
 
               const createNote = () => {
                 if (!findNote()) {
-                  terminal.new_line()
                   terminal.read_textarea(`Title: ${noteName}`).then((input) => {
                     notes.list.push({ name: noteName, note: input })
                     storage.store('notes', notes)
@@ -547,7 +582,7 @@ define([
         aliases: ['rs'],
         help: `~Command help
               ~~Command: restart
-              ~Aliases: rs
+              ~Alias: rs
               ~Details: restart the terminal
               ~Usage:   restart~`,
         run: async function() {

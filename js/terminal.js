@@ -5,6 +5,7 @@ define(
 
     Terminal.prototype = (function(dom, styles, storage, welcome) {
       let config = {}
+      let process_stack = []
 
       let states = {
         curr_buffer: 0,
@@ -604,6 +605,18 @@ define(
         components.prompt_symbol.innerText = config['prompt-symbol']
       }
 
+      const add_process = (process) => process_stack.push({ ...process, PID: process_stack.length + 1 })
+
+      const end_process = (name) => {
+        const _process = get_process(name)
+        console.log(`process ${name}: ${_process}`)
+        process_stack = process_stack.filter(p => p !== _process)
+      }
+
+      const get_process = (name) => process_stack.find(p => p.name === name)
+
+      const get_all_process = () => [...process_stack]
+
       return {
         constructor: Terminal,
 
@@ -631,6 +644,12 @@ define(
         /* config */
         get_config: get_config,
         set_config: set_config,
+
+        /* process */
+        add_process: add_process,
+        end_process: end_process,
+        get_process: get_process,
+        get_all_process: get_all_process,
 
         test: commands
       }

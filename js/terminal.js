@@ -62,45 +62,28 @@ define(
        * @param {String} key - Configuration key to be changed.
        * @param {String|Number} value - New value of the key specified.
        */
-      function set_config(key, value) {
-        return new Promise((resolve, reject) => {
-          config[key] = value
-          styles.setVar(`--config-${key}`, value)
-          storage.store('terminal-config', config)
-          reload_main_stdin()
-
-          return resolve()
-        })
+      async function set_config(key, value) {
+        config[key] = value
+        styles.setVar(`--config-${key}`, value)
+        storage.store('terminal-config', config)
+        reload_main_stdin()
       }
 
       /**
        * Get the names of the installed commands in the terminal.
        */
-      function get_installed_commands() {
-        return Object.keys(commands.installed)
-      }
+      const get_installed_commands = () => Object.keys(commands.installed)
 
       /**
        * Gets the help/manual of the specified command.
        * @param {String} command - Name of the command
        */
-      function get_command_help(command) {
-        return new Promise((resolve, reject) => {
-          const help = commands.help(command)
-
-          if (help)
-            return resolve(help)
-          else
-            return reject()
-        })
-      }
+      const get_command_help = (command) => commands.help(command) || Promise.reject()
 
       /**
        * Gets the terminal's configuration
        */
-      function get_config() {
-        return config
-      }
+      const get_config = () => config
 
       /**
        * Must be run first before doing anything with the terminal. Retrieves the configuration in 
@@ -334,8 +317,7 @@ define(
       /**
        * delete the number of lines specified.
        */
-      async function delete_line(lines = 1) {
-        console.log(lines)
+      function delete_line(lines = 1) {
         if (typeof lines !== 'number') {
           throw ({ code: null, details: '[delete_line] argument provided is not of type "Number"' })
         }
@@ -649,6 +631,8 @@ define(
         /* config */
         get_config: get_config,
         set_config: set_config,
+
+        test: commands
       }
     })(dom, styles, storage, welcome)
 

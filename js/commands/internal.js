@@ -45,7 +45,19 @@ define([
         help: `~Command Help
               ~~Command: music
               ~Details: plays song/s from the user's machine.
-              ~Usage:   music~`,
+              ~Usage:   music [command]
+              ~Commands:
+              ~    play, pause, stop, next, prev, list, new~`,
+        error_codes: {
+          M01: {
+            code: null,
+            details: `there are no songs loaded, check the help commnand for more details`
+          },
+          M02: {
+            code: null,
+            details: `invalid action, check the help command for more details`
+          }
+        },
         run: async function(args) {
           const terminal = this.terminal
           const action = args.shift() || ''
@@ -75,57 +87,68 @@ define([
               index: 0,
               audio: null,
             }
-
           }
 
-          function playAudio() {
-            if (_music_.files.length > 0)
+          const hasFiles = () => !!_music_.files && _music_.files.length > 0
+
+          const playAudio = () => {
+            if (hasFiles())
               _music_.audio.play()
             else
-              throw { code: null, details: `there are no songs loaded, check the help commnand for more details` }
+              throw this.error_codes.M01
           }
 
-          function pauseAudio() {
-            if (_music_.files.length > 0)
+          const pauseAudio = () => {
+            if (hasFiles())
               _music_.audio.pause()
             else
-              throw { code: null, details: `there are no songs loaded, check the help commnand for more details` }
+              throw this.error_codes.M01
           }
 
-          function stopAudio() {
-            if (_music_.files.length > 0) {
+          const stopAudio = () => {
+            if (hasFiles()) {
               _music_.audio.currentTime = 0
               _music_.audio.pause()
             } else {
-              throw { code: null, details: `there are no songs loaded, check the help commnand for more details` }
+              throw this.error_codes.M01
             }
           }
 
-          function nextAudio() {
-            if (_music_.files.length > 0)
-              _music_.audio.currentTime = _music_.audio.duration
-            else
-              throw { code: null, details: `there are no songs loaded, check the help commnand for more details` }
-          }
-
-          function prevAudio() {
-            if (_music_.files.length > 0) {
-              _music_.audio.pause()
-              _music_.reader.readAsDataURL(_music_.files[_music_.index > 0 ? _music_.index - 1 : _music_.files.length - 1])
-              _music_.index -= 1
+          const nextAudio = () => {
+            if (hasFiles()) {
+              if (_music_.files.length === 1) {
+                pauseAudio()
+                _music_.reader.readAsDataURL(_music_.files[0])
+              } else {
+                _music_.audio.currentTime = _music_.audio.duration
+              }
             } else {
-              throw { code: null, details: `there are no songs loaded, check the help commnand for more details` }
+              throw this.error_codes.M01
             }
           }
 
-          function listSongs() {
-            if (_music_.files.length > 0)
+          const prevAudio = () => {
+            if (hasFiles()) {
+              pauseAudio()
+
+              if (_music_.files.length > 1) {
+                _music_.index -= 1
+              }
+
+              _music_.reader.readAsDataURL(_music_.files[_music_.index])
+            } else {
+              throw this.error_codes.M01
+            }
+          }
+
+          const listSongs = () => {
+            if (hasFiles())
               _music_.files.forEach((f, i) => terminal.print(`${i} - ${f.name}`))
             else
-              throw { code: null, details: `there are no songs loaded, check the help commnand for more details` }
+              throw this.error_codes.M01
           }
 
-          async function newAudio() {
+          const newAudio = async () => {
             let newFiles = await terminal.read_files(true)
 
             if (process) {
@@ -185,6 +208,16 @@ define([
             })
           }
 
+          async function endAudio() {
+            const process = terminal.get_process('music')
+
+            if (process) {
+              process.data._music_.audio.pause()
+            }
+
+            terminal.end_process('music')
+          }
+
           switch (action) {
             case 'play':
               await playAudio();
@@ -208,8 +241,11 @@ define([
             case '':
               await newAudio();
               break
+            case 'end':
+              await endAudio()
+              break
             default:
-              throw { code: null, details: `unknown action: ${action}, check the help command for more details` }
+              throw this.error_codes.M02
           }
         },
       },

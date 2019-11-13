@@ -6,7 +6,7 @@ define([
         name: 'test',
         help: '',
         run: async function(args) {
-          print('test')
+          const terminal = this.terminal
         }
       },
 
@@ -46,66 +46,173 @@ define([
               ~~Command: music
               ~Details: plays song/s from the user's machine.
               ~Usage:   music~`,
-        run: async function() {
+        run: async function(args) {
           const terminal = this.terminal
-          const reader = new FileReader()
-          let files = null
-          let index = 0
+          const action = args.shift() || ''
+          let _music_ = {}
 
           function shuffle(songs) {
-            let random = Array.from(songs)
-            for (var i = random.length - 1; i > 0; i--) {
-              var j = Math.floor(Math.random() * (i + 1));
-              var temp = random[i];
-              random[i] = random[j];
-              random[j] = temp;
+            let shuffled = Array.from(songs)
+
+            for (let i = songs.length - 1; i > 0; i--) {
+              const j = ~~(Math.random() * (i + 1))
+              const temp = shuffled[i];
+              shuffled[i] = shuffled[j];
+              shuffled[j] = temp;
             }
-            return random
+
+            return shuffled
           }
 
-          files = await terminal.read_files(true, ['.mp3'])
+          const process = terminal.get_process('music')
 
-          if (!files) return
+          if (process) {
+            _music_ = process.data._music_
+          } else {
+            _music_ = {
+              reader: new FileReader(),
+              files: null,
+              index: 0,
+              audio: null,
+            }
 
-          files = shuffle(files)
+          }
 
-          terminal.print(`Playing ${files[0].name.replace(/\.[^.]+$/, '')}${files.length > 1 ? ` and ${files.length - 1} more`: ''} ...`)
+          function playAudio() {
+            if (_music_.files.length > 0)
+              _music_.audio.play()
+            else
+              throw { code: null, details: `there are no songs loaded, check the help commnand for more details` }
+          }
 
-          reader.onload = (e) => {
-            const audio = new Audio()
-            const actx = new(window.AudioContext || window.webkitAudioContext)()
-            const src = actx.createMediaElementSource(audio)
-            const fader = actx.createGain()
+          function pauseAudio() {
+            if (_music_.files.length > 0)
+              _music_.audio.pause()
+            else
+              throw { code: null, details: `there are no songs loaded, check the help commnand for more details` }
+          }
 
-            src.connect(fader).connect(actx.destination)
+          function stopAudio() {
+            if (_music_.files.length > 0) {
+              _music_.audio.currentTime = 0
+              _music_.audio.pause()
+            } else {
+              throw { code: null, details: `there are no songs loaded, check the help commnand for more details` }
+            }
+          }
 
-            audio.src = e.target.result
+          function nextAudio() {
+            if (_music_.files.length > 0)
+              _music_.audio.currentTime = _music_.audio.duration
+            else
+              throw { code: null, details: `there are no songs loaded, check the help commnand for more details` }
+          }
 
-            audio.onloadedmetadata = function() {
-              const duration = audio.duration
+          function prevAudio() {
+            if (_music_.files.length > 0) {
+              _music_.audio.pause()
+              _music_.reader.readAsDataURL(_music_.files[_music_.index > 0 ? _music_.index - 1 : _music_.files.length - 1])
+              _music_.index -= 1
+            } else {
+              throw { code: null, details: `there are no songs loaded, check the help commnand for more details` }
+            }
+          }
 
-              this.onplay = () => {
-                fader.gain.setValueAtTime(0.0, 0.0)
-                fader.gain.linearRampToValueAtTime(0.75, 4.0)
-                fader.gain.linearRampToValueAtTime(0.75, duration - 5.0)
-                fader.gain.linearRampToValueAtTime(0.00, duration)
+          function listSongs() {
+            if (_music_.files.length > 0)
+              _music_.files.forEach((f, i) => terminal.print(`${i} - ${f.name}`))
+            else
+              throw { code: null, details: `there are no songs loaded, check the help commnand for more details` }
+          }
+
+          async function newAudio() {
+            let newFiles = await terminal.read_files(true)
+
+            if (process) {
+              process.data._music_.audio.pause()
+              terminal.end_process('music')
+            }
+
+            newFiles = shuffle(newFiles)
+            _music_.files = newFiles
+            _music_.index = 0
+
+            if (_music_.audio) {
+              _music_.audio.pause()
+            }
+
+            terminal.print(`Playing ${_music_.files[0].name.replace(/\.[^.]+$/, '')}${_music_.files.length > 1 ? ` and ${_music_.files.length - 1} more`: ''} ...`)
+
+            _music_.reader.onload = (e) => {
+              _music_.audio = new Audio()
+              window.x = _music_.audio
+              const actx = new(window.AudioContext || window.webkitAudioContext)()
+              const src = actx.createMediaElementSource(_music_.audio)
+              const fader = actx.createGain()
+
+              src.connect(fader).connect(actx.destination)
+
+              _music_.audio.src = e.target.result
+
+              _music_.audio.onloadedmetadata = function() {
+                const duration = _music_.audio.duration
+
+                this.onplay = () => {
+                  fader.gain.setValueAtTime(0.0, 0.0)
+                  fader.gain.linearRampToValueAtTime(0.75, 4.0)
+                  fader.gain.linearRampToValueAtTime(0.75, duration - 5.0)
+                  fader.gain.linearRampToValueAtTime(0.00, duration)
+                }
+
+                this.play()
               }
 
-              this.play()
+              _music_.audio.onended = () => {
+                _music_.index += 1
+
+                if (_music_.index < _music_.files.length)
+                  _music_.reader.readAsDataURL(_music_.files[_music_.index])
+              }
             }
 
-            audio.onended = () => {
-              index += 1
+            _music_.reader.readAsDataURL(_music_.files[_music_.index])
 
-              if (index < files.length)
-                reader.readAsDataURL(files[index])
-            }
+            terminal.add_process({
+              name: 'music',
+              data: {
+                _music_: _music_
+              }
+            })
           }
 
-          reader.readAsDataURL(files[index])
-        }
+          switch (action) {
+            case 'play':
+              await playAudio();
+              break
+            case 'pause':
+              await pauseAudio();
+              break
+            case 'stop':
+              await stopAudio();
+              break
+            case 'next':
+              await nextAudio();
+              break
+            case 'prev':
+              await prevAudio();
+              break
+            case 'list':
+              await listSongs();
+              break
+            case 'new':
+            case '':
+              await newAudio();
+              break
+            default:
+              throw { code: null, details: `unknown action: ${action}, check the help command for more details` }
+          }
+        },
       },
-
 
       {
         name: 'clear',
@@ -319,7 +426,6 @@ define([
             }
           })
         }
-
       },
 
       {

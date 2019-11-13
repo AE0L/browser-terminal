@@ -456,7 +456,7 @@ define(
                 } else {
                   return resolve(input.files)
                 }
-              }, 100)
+              }, 250)
             }
 
             window.addEventListener('focus', check_files, { once: true })
@@ -609,7 +609,6 @@ define(
 
       const end_process = (name) => {
         const _process = get_process(name)
-        console.log(`process ${name}: ${_process}`)
         process_stack = process_stack.filter(p => p !== _process)
       }
 
